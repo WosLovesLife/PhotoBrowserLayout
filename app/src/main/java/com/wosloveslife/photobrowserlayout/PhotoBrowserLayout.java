@@ -15,11 +15,15 @@ import android.support.annotation.StyleRes;
 import android.support.v4.view.PagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.util.AttributeSet;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 import android.widget.FrameLayout;
-import android.widget.ImageView;
+
+import com.facebook.drawee.backends.pipeline.Fresco;
+import com.facebook.drawee.view.SimpleDraweeView;
+import com.facebook.imagepipeline.request.ImageRequestBuilder;
 
 import java.util.List;
 
@@ -63,7 +67,6 @@ public class PhotoBrowserLayout extends FrameLayout {
 
         mAdapter = new Adapter();
         mViewPager.setAdapter(mAdapter);
-        mViewPager.setBackgroundResource(R.color.colorAccent);
 
         mViewPager.addOnPageChangeListener(new ViewPager.SimpleOnPageChangeListener() {
             @Override
@@ -103,15 +106,29 @@ public class PhotoBrowserLayout extends FrameLayout {
 
         @Override
         public Object instantiateItem(ViewGroup container, int position) {
-            final ImageView imageView = new ImageView(container.getContext());
+            final SimpleDraweeView imageView = (SimpleDraweeView) LayoutInflater.from(container.getContext()).inflate(R.layout.item_iamge2, container, false);
             container.addView(imageView);
             imageView.setImageResource(mAddresses.get(position));
+            imageView.setController(Fresco.newDraweeControllerBuilder().setImageRequest(ImageRequestBuilder.newBuilderWithResourceId(mAddresses.get(position)).build()).build());
             if (mFirst) {
                 mFirst = false;
                 mViewPager.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
                     @Override
                     public void onGlobalLayout() {
                         mViewPager.getViewTreeObserver().removeGlobalOnLayoutListener(this);
+                        Rect bounds = imageView.getDrawable().getBounds();
+//                        final int originMarginW = -(bounds.width() - mSharedItem.mRectOrigin.width());
+//                        final int originMarginH = -(bounds.height() - mSharedItem.mRectOrigin.height());
+//                        mSharedItem.mRectOrigin = bounds;
+//                        ViewGroup.MarginLayoutParams layoutParams = (MarginLayoutParams) mViewPager.getLayoutParams();
+//                        final int realMarginW = layoutParams.rightMargin;
+//                        final int realMarginH = layoutParams.bottomMargin;
+//                        layoutParams.rightMargin = originMarginW;
+//                        layoutParams.bottomMargin = originMarginH;
+//                        mViewPager.setLayoutParams(layoutParams);
+
+//                        imageView.getDrawable().setBounds(0,0,mSharedItem.mRectOrigin.width(),mSharedItem.mRectOrigin.height());
+//                        imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
 
                         mSharedItem.mRectReal.set(0, 0, mViewPager.getMeasuredWidth(), mViewPager.getMeasuredHeight());
                         ViewGroup.LayoutParams params = mViewPager.getLayoutParams();
@@ -131,6 +148,8 @@ public class PhotoBrowserLayout extends FrameLayout {
                         final int deltaH = mSharedItem.mRectReal.height() - mSharedItem.mRectOrigin.height();
                         final int deltaX = mSharedItem.mLocationReal[0] - mSharedItem.mLocationOrigin[0];
                         final int deltaY = mSharedItem.mLocationReal[1] - mSharedItem.mLocationOrigin[1];
+//                        final int deltaMarginW = realMarginW - originMarginW;
+//                        final int deltaMarginH = realMarginH - originMarginH;
 
                         ValueAnimator valueAnimator = ValueAnimator.ofFloat(0, 1);
                         valueAnimator.setDuration(mDuration);
@@ -143,6 +162,11 @@ public class PhotoBrowserLayout extends FrameLayout {
                                 params.height = (int) (mSharedItem.mRectOrigin.height() + deltaH * value);
                                 mViewPager.setLayoutParams(params);
                                 scrollTo((int) (mSharedItem.mLocationOrigin[0] + deltaX * value), (int) (mSharedItem.mLocationOrigin[1] + deltaY * value));
+
+//                                ViewGroup.MarginLayoutParams layoutParams = (MarginLayoutParams) mViewPager.getLayoutParams();
+//                                layoutParams.rightMargin = (int) (originMarginW + deltaMarginW * value);
+//                                layoutParams.bottomMargin = (int) (originMarginH + deltaMarginH * value);
+//                                mViewPager.setLayoutParams(layoutParams);
                             }
                         });
                         valueAnimator.start();

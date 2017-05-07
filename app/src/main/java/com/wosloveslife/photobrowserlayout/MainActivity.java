@@ -4,9 +4,14 @@ import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageView;
+
+import com.facebook.drawee.backends.pipeline.Fresco;
+import com.facebook.drawee.drawable.ScalingUtils;
+import com.facebook.drawee.view.SimpleDraweeView;
+import com.facebook.imagepipeline.request.ImageRequestBuilder;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -45,14 +50,16 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public Holder onCreateViewHolder(ViewGroup parent, int viewType) {
-            ImageView imageView = new ImageView(parent.getContext());
-            imageView.setScaleType(ImageView.ScaleType.CENTER_CROP);
-            return new Holder(imageView);
+            SimpleDraweeView view = (SimpleDraweeView) LayoutInflater.from(parent.getContext()).inflate(R.layout.item_iamge, parent, false);
+            view.getHierarchy().setActualImageScaleType(ScalingUtils.ScaleType.FIT_CENTER);
+            ViewGroup.LayoutParams layoutParams = new ViewGroup.LayoutParams(parent.getMeasuredWidth() / 3, (int) (parent.getMeasuredWidth() / 2.5f));
+            view.setLayoutParams(layoutParams);
+            return new Holder(view);
         }
 
         @Override
         public void onBindViewHolder(final Holder holder, final int position) {
-            holder.mImageView.setImageResource(mAddress.get(position));
+            holder.mImageView.setController(Fresco.newDraweeControllerBuilder().setImageRequest(ImageRequestBuilder.newBuilderWithResourceId(mAddress.get(position)).build()).build());
             holder.mImageView.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
@@ -77,11 +84,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     class Holder extends RecyclerView.ViewHolder {
-        ImageView mImageView;
+        SimpleDraweeView mImageView;
 
         public Holder(View itemView) {
             super(itemView);
-            mImageView = (ImageView) itemView;
+            mImageView = (SimpleDraweeView) itemView;
         }
     }
 
