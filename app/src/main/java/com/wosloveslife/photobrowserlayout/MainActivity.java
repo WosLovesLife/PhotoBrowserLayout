@@ -7,11 +7,7 @@ import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-
-import com.facebook.drawee.backends.pipeline.Fresco;
-import com.facebook.drawee.drawable.ScalingUtils;
-import com.facebook.drawee.view.SimpleDraweeView;
-import com.facebook.imagepipeline.request.ImageRequestBuilder;
+import android.widget.ImageView;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -50,8 +46,9 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public Holder onCreateViewHolder(ViewGroup parent, int viewType) {
-            SimpleDraweeView view = (SimpleDraweeView) LayoutInflater.from(parent.getContext()).inflate(R.layout.item_iamge, parent, false);
-            view.getHierarchy().setActualImageScaleType(ScalingUtils.ScaleType.FIT_CENTER);
+            ImageView view = (ImageView) LayoutInflater.from(parent.getContext()).inflate(R.layout.item_iamge, parent, false);
+//            view.getHierarchy().setActualImageScaleType(ScalingUtils.ScaleType.CENTER_CROP);
+            view.setScaleType(ImageView.ScaleType.CENTER_CROP);
             ViewGroup.LayoutParams layoutParams = new ViewGroup.LayoutParams(parent.getMeasuredWidth() / 3, (int) (parent.getMeasuredWidth() / 2.5f));
             view.setLayoutParams(layoutParams);
             return new Holder(view);
@@ -59,7 +56,8 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void onBindViewHolder(final Holder holder, final int position) {
-            holder.mImageView.setController(Fresco.newDraweeControllerBuilder().setImageRequest(ImageRequestBuilder.newBuilderWithResourceId(mAddress.get(position)).build()).build());
+//            holder.mImageView.setController(Fresco.newDraweeControllerBuilder().setImageRequest(ImageRequestBuilder.newBuilderWithResourceId(mAddress.get(position)).build()).build());
+            holder.mImageView.setImageResource(mAddress.get(position));
             holder.mImageView.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
@@ -84,11 +82,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     class Holder extends RecyclerView.ViewHolder {
-        SimpleDraweeView mImageView;
+        ImageView mImageView;
 
         public Holder(View itemView) {
             super(itemView);
-            mImageView = (SimpleDraweeView) itemView;
+            mImageView = (ImageView) itemView;
         }
     }
 
