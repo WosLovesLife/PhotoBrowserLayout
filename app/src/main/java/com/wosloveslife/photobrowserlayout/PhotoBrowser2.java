@@ -1,7 +1,6 @@
 package com.wosloveslife.photobrowserlayout;
 
 import android.animation.Animator;
-import android.animation.AnimatorSet;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.os.Build;
@@ -10,16 +9,21 @@ import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.annotation.RequiresApi;
 import android.support.annotation.StyleRes;
+import android.support.v4.view.PagerAdapter;
+import android.support.v4.view.ViewPager;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 
 import com.wosloveslife.photobrowserlayout.animations.EnterScreenAnimations;
 import com.wosloveslife.photobrowserlayout.animations.ExitScreenAnimations;
+
+import java.util.List;
 
 /**
  * Created by zhangh on 2017/5/14.
@@ -28,15 +32,15 @@ import com.wosloveslife.photobrowserlayout.animations.ExitScreenAnimations;
 public class PhotoBrowser2 extends FrameLayout {
     private static final String TAG = PhotoBrowser2.class.getSimpleName();
 
-    private static final long IMAGE_TRANSLATION_DURATION = 3000;
-
     private ImageView mEnlargedImage;
     private ImageView mTransitionImage;
 
-    private AnimatorSet mExitingAnimation;
-
     private EnterScreenAnimations mEnterScreenAnimations;
     private ExitScreenAnimations mExitScreenAnimations;
+    private ViewPager mViewPager;
+    private Adapter mAdapter;
+
+    private boolean mFirst;
 
     public PhotoBrowser2(@NonNull Context context) {
         this(context, null);
@@ -48,18 +52,58 @@ public class PhotoBrowser2 extends FrameLayout {
 
     public PhotoBrowser2(@NonNull Context context, @Nullable AttributeSet attrs, @AttrRes int defStyleAttr) {
         super(context, attrs, defStyleAttr);
+        onCreate();
     }
 
     @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
     public PhotoBrowser2(@NonNull Context context, @Nullable AttributeSet attrs, @AttrRes int defStyleAttr, @StyleRes int defStyleRes) {
         super(context, attrs, defStyleAttr, defStyleRes);
+        onCreate();
     }
 
     protected void onCreate() {
         LayoutInflater.from(getContext()).inflate(R.layout.image_details_activity_layout, this);
+        mViewPager = (ViewPager) findViewById(R.id.viewPager);
+        mAdapter = new Adapter();
+        mViewPager.setAdapter(mAdapter);
+    }
 
-        mEnlargedImage = (ImageView) findViewById(R.id.enlarged_image);
+    private class Adapter extends PagerAdapter {
+        List<Integer> res;
 
+        @Override
+        public int getCount() {
+            return res != null ? res.size() : 0;
+        }
+
+        @Override
+        public boolean isViewFromObject(View view, Object object) {
+            return view == object;
+        }
+
+        @Override
+        public Object instantiateItem(ViewGroup container, int position) {
+            View view = LayoutInflater.from(container.getContext()).inflate(R.layout.item_iamge2, container, false);
+            ImageView imageView = (ImageView) view.findViewById(R.id.simpleDraweeView);
+            imageView.setImageResource(res.get(position));
+            if (mFirst) {
+                mFirst = false;
+                imageView.setVisibility(INVISIBLE);
+                mEnlargedImage = imageView;
+                prepare();
+            }
+            container.addView(view);
+            return view;
+        }
+
+        @Override
+        public void destroyItem(ViewGroup container, int position, Object object) {
+            super.destroyItem(container, position, object);
+            container.removeView((View) object);
+        }
+    }
+
+    private void prepare() {
         final View mainContainer = findViewById(R.id.main_container);
 
         initializeTransitionView();
@@ -72,7 +116,6 @@ public class PhotoBrowser2 extends FrameLayout {
 
     private void initializeTransitionView() {
         mTransitionImage = new ImageView(getContext());
-        addView(mTransitionImage);
 
         int thumbnailTop = mSharedElement.top - getStatusBarHeight();
         int thumbnailLeft = mSharedElement.left;
@@ -81,12 +124,12 @@ public class PhotoBrowser2 extends FrameLayout {
         ImageView.ScaleType scaleType = mSharedElement.scaleType;
 
         // We set initial margins to the view so that it was situated at exact same spot that view from the previous screen were.
-        FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) mTransitionImage.getLayoutParams();
-        layoutParams.height = thumbnailHeight;
-        layoutParams.width = thumbnailWidth;
+        FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(thumbnailWidth, thumbnailHeight);
         layoutParams.setMargins(thumbnailLeft, thumbnailTop, 0, 0);
 
         mTransitionImage.setScaleType(scaleType);
+
+        addView(mTransitionImage, layoutParams);
 
         mTransitionImage.setImageBitmap(mSharedElement.mBitmap);
     }
@@ -118,10 +161,8 @@ public class PhotoBrowser2 extends FrameLayout {
                 Log.v(TAG, "onPreDraw, mFrames " + mFrames);
 
                 switch (mFrames++) {
-                    case 0:
-                        /*
-                         * 1. start animation on first frame
-                         */
+                    case 1:
+                        /* 1. start animation on first frame */
                         final int[] finalLocationOnTheScreen = new int[2];
                         mEnlargedImage.getLocationOnScreen(finalLocationOnTheScreen);
 
@@ -132,10 +173,8 @@ public class PhotoBrowser2 extends FrameLayout {
                                 mEnlargedImage.getHeight());
 
                         return true;
-                    case 1:
-                        /*
-                         * 2. Do nothing. We just draw this frame
-                         */
+                    case 0:
+                        /* 2. Do nothing. We just draw this frame */
 
                         return true;
                 }
@@ -145,7 +184,6 @@ public class PhotoBrowser2 extends FrameLayout {
                  * Here we ensure that animated view will be visible when we make the viw behind invisible
                  */
                 Log.v(TAG, "run, onAnimationStart");
-//                mBus.post(new ChangeImageThumbnailVisibility(false));
 
                 mEnlargedImage.getViewTreeObserver().removeOnPreDrawListener(this);
 
@@ -156,8 +194,14 @@ public class PhotoBrowser2 extends FrameLayout {
         });
     }
 
+    public void setData(List<Integer> res, int position) {
+        mAdapter.res = res;
+        mAdapter.notifyDataSetChanged();
+        mViewPager.setCurrentItem(position);
+    }
+
     public void show() {
-        onCreate();
+        mFirst = true;
     }
 
     SharedElement mSharedElement;

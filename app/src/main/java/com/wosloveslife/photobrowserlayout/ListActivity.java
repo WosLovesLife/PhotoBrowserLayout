@@ -79,6 +79,7 @@ public class ListActivity extends AppCompatActivity {
                     holder.mImageView.getLocalVisibleRect(rect);
 
                     mPhotoBrowser = new PhotoBrowser2(ListActivity.this);
+                    mPhotoBrowser.setData(mAddress, holder.getAdapterPosition());
                     mPhotoBrowser.mSharedElement = new PhotoBrowser2.SharedElement(screenLocation[0], screenLocation[1],
                             holder.mImageView.getWidth(), holder.mImageView.getHeight(), holder.mImageView.getScaleType(),
                             ((BitmapDrawable) holder.mImageView.getDrawable()).getBitmap());
