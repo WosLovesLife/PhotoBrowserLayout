@@ -3,6 +3,11 @@ package com.wosloveslife.photobrowserlayout;
 import android.animation.Animator;
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
+import android.media.Image;
+import android.net.Uri;
 import android.os.Build;
 import android.support.annotation.AttrRes;
 import android.support.annotation.NonNull;
@@ -20,10 +25,26 @@ import android.view.ViewTreeObserver;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 
+import com.facebook.binaryresource.FileBinaryResource;
+import com.facebook.cache.common.SimpleCacheKey;
+import com.facebook.common.references.CloseableReference;
+import com.facebook.drawee.backends.pipeline.Fresco;
+import com.facebook.drawee.drawable.ScalingUtils;
+import com.facebook.drawee.view.SimpleDraweeView;
+import com.facebook.imagepipeline.image.CloseableImage;
+import com.facebook.imagepipeline.request.ImageRequest;
 import com.wosloveslife.photobrowserlayout.animations.EnterScreenAnimations;
 import com.wosloveslife.photobrowserlayout.animations.ExitScreenAnimations;
 
+import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.util.List;
+
+import static android.R.attr.resource;
+import static android.R.attr.scaleType;
 
 /**
  * Created by zhangh on 2017/5/14.
@@ -32,7 +53,7 @@ import java.util.List;
 public class PhotoBrowser2 extends FrameLayout {
     private static final String TAG = PhotoBrowser2.class.getSimpleName();
 
-    private ImageView mEnlargedImage;
+    private SimpleDraweeView mEnlargedImage;
     private ImageView mTransitionImage;
 
     private EnterScreenAnimations mEnterScreenAnimations;
@@ -69,7 +90,7 @@ public class PhotoBrowser2 extends FrameLayout {
     }
 
     private class Adapter extends PagerAdapter {
-        List<Integer> res;
+        List<String> res;
 
         @Override
         public int getCount() {
@@ -82,15 +103,24 @@ public class PhotoBrowser2 extends FrameLayout {
         }
 
         @Override
-        public Object instantiateItem(ViewGroup container, int position) {
+        public Object instantiateItem(ViewGroup container, final int position) {
             View view = LayoutInflater.from(container.getContext()).inflate(R.layout.item_iamge2, container, false);
-            ImageView imageView = (ImageView) view.findViewById(R.id.simpleDraweeView);
-            imageView.setImageResource(res.get(position));
+            final SimpleDraweeView imageView = (SimpleDraweeView) view.findViewById(R.id.simpleDraweeView);
+            imageView.setImageBitmap(mSharedElement.mBitmap);
+            final String address = res.get(position);
             if (mFirst) {
                 mFirst = false;
                 imageView.setVisibility(INVISIBLE);
                 mEnlargedImage = imageView;
+                mEnlargedImage.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        mEnlargedImage.setImageURI(address);
+                    }
+                }, 0);
                 prepare();
+            } else {
+                imageView.setImageURI(address);
             }
             container.addView(view);
             return view;
@@ -98,7 +128,6 @@ public class PhotoBrowser2 extends FrameLayout {
 
         @Override
         public void destroyItem(ViewGroup container, int position, Object object) {
-            super.destroyItem(container, position, object);
             container.removeView((View) object);
         }
     }
@@ -132,6 +161,7 @@ public class PhotoBrowser2 extends FrameLayout {
         addView(mTransitionImage, layoutParams);
 
         mTransitionImage.setImageBitmap(mSharedElement.mBitmap);
+//        mTransitionImage.setImageResource(R.drawable.img1);
     }
 
     private int getStatusBarHeight() {
@@ -144,7 +174,7 @@ public class PhotoBrowser2 extends FrameLayout {
     }
 
     private void initializeEnlargedImageAndRunAnimation() {
-        mEnlargedImage.setImageBitmap(mSharedElement.mBitmap);
+        mEnlargedImage.getHierarchy().setPlaceholderImage(new BitmapDrawable(mSharedElement.mBitmap));
         runEnteringAnimation();
     }
 
@@ -194,7 +224,7 @@ public class PhotoBrowser2 extends FrameLayout {
         });
     }
 
-    public void setData(List<Integer> res, int position) {
+    public void setData(List<String> res, int position) {
         mAdapter.res = res;
         mAdapter.notifyDataSetChanged();
         mViewPager.setCurrentItem(position);
@@ -243,5 +273,43 @@ public class PhotoBrowser2 extends FrameLayout {
                 toHeight,
                 mEnterScreenAnimations.getInitialThumbnailMatrixValues());
         mExitScreenAnimations.addListener(listener);
+    }
+
+    public static Bitmap getCacheBitmap(Uri uri) {
+        Bitmap bitmap = null;
+        Fresco.getImagePipelineFactory().getBitmapMemoryCache().get(new SimpleCacheKey(uri.toString()));
+
+        FileBinaryResource resource = (FileBinaryResource) Fresco.getImagePipelineFactory().getMainDiskStorageCache().getResource(new SimpleCacheKey(uri.toString()));
+        if (resource == null) {
+            return null;
+        }
+        File file = resource.getFile();
+        BufferedInputStream inputStream = null;
+        try {
+            inputStream = new BufferedInputStream(new FileInputStream(file));
+            bitmap = BitmapFactory.decodeStream(inputStream);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } finally {
+            if (inputStream != null) {
+                try {
+                    inputStream.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        return bitmap;
+
+    }
+
+    public static ImageView.ScaleType fbType2ImgType(ScalingUtils.ScaleType scaleType) {
+        if (scaleType == ScalingUtils.ScaleType.CENTER_CROP) {
+            return ImageView.ScaleType.CENTER_CROP;
+        } else if (scaleType == ScalingUtils.ScaleType.FOCUS_CROP) {
+            return ImageView.ScaleType.MATRIX;
+        } else {
+            return ImageView.ScaleType.FIT_CENTER;
+        }
     }
 }
